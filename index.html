@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Document Cleaner</title>
+</head>
+<body>
+    <h1>Upload Your Word Document for Processing</h1>
+    <form id="uploadForm">
+        <input type="file" id="wordFile" accept=".docx" required>
+        <button type="submit">Upload and Process</button>
+    </form>
+
+    <h3>Processed Text</h3>
+    <div id="result"></div>
+
+    <!-- Add Mammoth.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+
+    <script>
+        // Character map for replacing Italian accented characters
+        const charMap = {
+            "à": "a", "À": "A",
+            "è": "e", "È": "E",
+            "é": "e", "É": "E",
+            "ì": "i", "Ì": "I",
+            "ò": "o", "Ò": "O",
+            "ù": "u", "Ù": "U",
+            "—": ", "
+        };
+
+        // Words that should remain untouched
+        const exceptionalWords = new Set(["μ", "µ"]);
+
+        // Function to clean text by replacing accented characters and removing unwanted ones
+        function cleanText(text) {
+            if (exceptionalWords.has(text.trim())) {
+                return text;
+            }
+
+            let changes = [];
+
+            // Replace Italian accented characters
+            for (const [k, v] of Object.entries(charMap)) {
+                if (text.includes(k)) {
+                    changes.push(k);
+                    text = text.split(k).join(v);
+                }
+            }
+
+            // Remove unwanted special characters except for bullet (•) and comma (,)
+            text = removeUnwantedSpecials(text, changes);
+
+            // Print changes to console
+            if (changes.length > 0) {
+                console.log(`Changes: ${[...new Set(changes)].sort().join(", ")}`);
+            }
+
+            return text;
+        }
+
+        // Function to remove unwanted non-ASCII characters
+        function removeUnwantedSpecials(text, changes) {
+            let newText = "";
+            for (const ch of text) {
+                if (/[\x00-\x7F]/.test(ch) || ch === "•" || ch === ",") {
+                    newText += ch;
+                } else {
+                    changes.push(ch);
+                }
+            }
+            return newText;
+        }
+
+        // Handle file upload and processing
+        document.getElementById('uploadForm').onsubmit = async function(event) {
+            event.preventDefault();
+            
+            // Get the selected file
+            const file = document.getElementById('wordFile').files[0];
+
+            if (!file) {
+                alert('Please select a file to upload.');
+                return;
+            }
+
+            // Read the Word file using FileReader
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const arrayBuffer = reader.result;
+                mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+                    .then(function(result) {
+                        // Clean the extracted text
+                        let cleanedText = cleanText(result.value);
+                        
+                        // Display the cleaned text
+                        document.getElementById('result').textContent = cleanedText;
+                    })
+                    .catch(function(err) {
+                        console.log('Error processing the document:', err);
+                    });
+            };
+
+            reader.readAsArrayBuffer(file);
+        };
+    </script>
+</body>
+</html>
