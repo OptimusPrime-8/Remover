@@ -3,26 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Awesome Website</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Upload Word File</title>
 </head>
 <body>
-    <header>
-        <h1>Welcome to My Awesome Website</h1>
-        <p>This is a simple website served by GitHub Pages!</p>
-    </header>
-
-    <section id="content">
-        <h2>About</h2>
-        <p>This is a simple webpage created using HTML, CSS, and JavaScript. GitHub Pages is an awesome way to host your projects for free!</p>
-    </section>
-
-    <button id="changeColorButton">Click to Change Color</button>
-
-    <footer>
-        <p>Made with ❤️ by You</p>
-    </footer>
-
-    <script src="scripts.js"></script>
+    <h1>Upload a Word Document (.docx)</h1>
+    <form action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".docx" required>
+        <button type="submit">Upload and Process</button>
+    </form>
 </body>
 </html>
