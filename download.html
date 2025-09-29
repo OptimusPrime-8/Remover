@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Text as Word File</title>
+</head>
+<body>
+  <h2>Enter Text and Download as Word</h2>
+
+  <!-- Text input -->
+  <textarea id="textInput" rows="8" cols="80" style="border:1px solid #ccc; padding:10px;">
+Type something here...
+  </textarea><br><br>
+
+  <!-- Download button -->
+  <button id="downloadBtn">Download as Word</button>
+
+  <!-- DOCX library -->
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.3.2/build/index.min.js"></script>
+
+  <script>
+    // Reusable download function
+    function downloadDocx(text, filename = "processed.docx") {
+      const doc = new docx.Document({
+        sections: [
+          {
+            children: [
+              new docx.Paragraph({
+                children: [
+                  new docx.TextRun({
+                    text: text,
+                    font: "Times New Roman"
+                  })
+                ]
+              })
+            ]
+          }
+        ]
+      });
+
+      docx.Packer.toBlob(doc).then(blob => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      }).catch(err => {
+        alert("Error generating Word document.");
+        console.error(err);
+      });
+    }
+
+    // Hook up button
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+      const text = document.getElementById("textInput").value.trim();
+      if (!text) {
+        alert("Please enter some text first.");
+        return;
+      }
+      downloadDocx(text, "my_text.docx");
+    });
+  </script>
+</body>
+</html>
