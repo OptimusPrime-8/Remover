@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -21,13 +21,14 @@
   <textarea id="pasteBox" rows="8" cols="80" style="border: 1px solid #ccc; padding: 10px;"></textarea><br>
   <button id="processPasteBtn">Process Pasted Text</button>
   <button id="copyBtn">Copy Processed Text</button>
+  <button id="downloadPasteBtn">Download Pasted</button>
 
   <h3>Uploaded / Processed Text</h3>
   <div id="result" style="white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; min-height: 100px;"></div>
 
   <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.3.2/docx.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.3.2/build/index.min.js"></script>
 
   <script>
     const charMap = {
@@ -82,6 +83,38 @@
       });
     }
 
+    function downloadDocx(text, filename) {
+      const doc = new docx.Document({
+        sections: [
+          {
+            children: [
+              new docx.Paragraph({
+                children: [
+                  new docx.TextRun({
+                    text: text,
+                    font: "Times New Roman"
+                  })
+                ]
+              })
+            ]
+          }
+        ]
+      });
+
+      docx.Packer.toBlob(doc).then(blob => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      }).catch(err => {
+        alert("Error generating Word document.");
+        console.error(err);
+      });
+    }
+
     // Upload button
     document.getElementById("uploadBtn").addEventListener("click", async () => {
       const file = document.getElementById("wordFile").files[0];
@@ -89,8 +122,8 @@
 
       try {
         uploadedText = await readWordFile(file);
-        processedText = ""; 
-        originalFileName = file.name; 
+        processedText = "";
+        originalFileName = file.name;
         document.getElementById("result").textContent = uploadedText;
       } catch (err) {
         alert("Error reading file. Make sure it is a valid Word document.");
@@ -105,44 +138,11 @@
       document.getElementById("result").textContent = processedText;
     });
 
-    // Download processed docx
-    document.getElementById("downloadBtn").addEventListener("click", async () => {
+    // Download processed uploaded docx
+    document.getElementById("downloadBtn").addEventListener("click", () => {
       if (!processedText) return alert("Please process the text before downloading.");
-
-      const doc = new docx.Document({
-        sections: [
-          {
-            children: [
-              new docx.Paragraph({
-                children: [
-                  new docx.TextRun({
-                    text: processedText,
-                    font: "Times New Roman"
-                  })
-                ]
-              })
-            ]
-          }
-        ]
-      });
-
-      try {
-        const blob = await docx.Packer.toBlob(doc);
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-
-        // Save as original filename with "_processed"
-        const baseName = originalFileName ? originalFileName.replace(/\.[^/.]+$/, "") : "processed";
-        link.download = baseName + "_processed.docx";
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-      } catch (err) {
-        alert("Error generating Word document.");
-        console.error(err);
-      }
+      const baseName = originalFileName ? originalFileName.replace(/\.[^/.]+$/, "") : "processed";
+      downloadDocx(processedText, baseName + "_processed.docx");
     });
 
     // Process pasted text
@@ -159,6 +159,12 @@
       navigator.clipboard.writeText(processedText)
         .then(() => alert("Processed text copied to clipboard!"))
         .catch(err => console.error("Copy failed:", err));
+    });
+
+    // Download processed pasted text
+    document.getElementById("downloadPasteBtn").addEventListener("click", () => {
+      if (!processedText) return alert("Please process the pasted text first.");
+      downloadDocx(processedText, "pasted_processed.docx");
     });
   </script>
 </body>
