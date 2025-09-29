@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,12 +6,21 @@
     <title>Upload, Process, and Download Word Document</title>
 </head>
 <body>
-    <h1>Upload, Process, and Download Word Document</h1>
+    <h1>Upload, Paste, Process, and Download Word Document</h1>
 
+    <!-- File upload section -->
     <input type="file" id="wordFile" accept=".doc,.docx">
     <button id="uploadBtn">Upload</button>
-    <button id="processBtn">Process</button>
+    <button id="processBtn">Process Uploaded</button>
     <button id="downloadBtn">Download</button>
+
+    <hr>
+
+    <!-- Paste text section -->
+    <h3>Paste Text Here</h3>
+    <textarea id="pasteBox" rows="8" cols="80" style="border: 1px solid #ccc; padding: 10px;"></textarea><br>
+    <button id="processPasteBtn">Process Pasted Text</button>
+    <button id="copyBtn">Copy Processed Text</button>
 
     <h3>Uploaded / Processed Text</h3>
     <div id="result" style="white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; min-height: 100px;"></div>
@@ -73,6 +82,7 @@
             });
         }
 
+        // Upload button
         document.getElementById("uploadBtn").addEventListener("click", async () => {
             const file = document.getElementById("wordFile").files[0];
             if (!file) return alert("Please select a Word file to upload.");
@@ -88,12 +98,14 @@
             }
         });
 
+        // Process uploaded file
         document.getElementById("processBtn").addEventListener("click", () => {
             if (!uploadedText) return alert("No file uploaded yet.");
             processedText = cleanText(uploadedText);
             document.getElementById("result").textContent = processedText;
         });
 
+        // Download processed docx
         document.getElementById("downloadBtn").addEventListener("click", async () => {
             if (!processedText) return alert("Please process the text before downloading.");
 
@@ -114,7 +126,6 @@
                 const blob = await docx.Packer.toBlob(doc);
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(blob);
-                // Use the original file name for download
                 link.download = originalFileName;
                 link.click();
                 URL.revokeObjectURL(link.href);
@@ -122,6 +133,22 @@
                 alert("Error generating Word document.");
                 console.error(err);
             }
+        });
+
+        // Process pasted text
+        document.getElementById("processPasteBtn").addEventListener("click", () => {
+            const text = document.getElementById("pasteBox").value.trim();
+            if (!text) return alert("Please paste some text first.");
+            processedText = cleanText(text);
+            document.getElementById("result").textContent = processedText;
+        });
+
+        // Copy processed text
+        document.getElementById("copyBtn").addEventListener("click", () => {
+            if (!processedText) return alert("No processed text to copy.");
+            navigator.clipboard.writeText(processedText)
+                .then(() => alert("Processed text copied to clipboard!"))
+                .catch(err => console.error("Copy failed:", err));
         });
     </script>
 </body>
