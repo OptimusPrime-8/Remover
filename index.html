@@ -1,155 +1,165 @@
 <!DOCTYPE html> 
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload, Process, and Download Word Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload, Paste, Process, and Download Word Document</title>
 </head>
 <body>
-    <h1>Upload, Paste, Process, and Download Word Document</h1>
+  <h1>Upload, Paste, Process, and Download Word Document</h1>
 
-    <!-- File upload section -->
-    <input type="file" id="wordFile" accept=".doc,.docx">
-    <button id="uploadBtn">Upload</button>
-    <button id="processBtn">Process Uploaded</button>
-    <button id="downloadBtn">Download</button>
+  <!-- File upload section -->
+  <input type="file" id="wordFile" accept=".doc,.docx">
+  <button id="uploadBtn">Upload</button>
+  <button id="processBtn">Process Uploaded</button>
+  <button id="downloadBtn">Download</button>
 
-    <hr>
+  <hr>
 
-    <!-- Paste text section -->
-    <h3>Paste Text Here</h3>
-    <textarea id="pasteBox" rows="8" cols="80" style="border: 1px solid #ccc; padding: 10px;"></textarea><br>
-    <button id="processPasteBtn">Process Pasted Text</button>
-    <button id="copyBtn">Copy Processed Text</button>
+  <!-- Paste text section -->
+  <h3>Paste Text Here</h3>
+  <textarea id="pasteBox" rows="8" cols="80" style="border: 1px solid #ccc; padding: 10px;"></textarea><br>
+  <button id="processPasteBtn">Process Pasted Text</button>
+  <button id="copyBtn">Copy Processed Text</button>
 
-    <h3>Uploaded / Processed Text</h3>
-    <div id="result" style="white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; min-height: 100px;"></div>
+  <h3>Uploaded / Processed Text</h3>
+  <div id="result" style="white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; min-height: 100px;"></div>
 
-    <!-- Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.1.3/docx.min.js"></script>
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.3.2/docx.js"></script>
 
-    <script>
-        const charMap = {
-            "à": "a", "À": "A",
-            "è": "e", "È": "E",
-            "é": "e", "É": "E",
-            "ì": "i", "Ì": "I",
-            "ò": "o", "Ò": "O",
-            "ù": "u", "Ù": "U",
-            "—": ", "
+  <script>
+    const charMap = {
+      "à": "a", "À": "A",
+      "è": "e", "È": "E",
+      "é": "e", "É": "E",
+      "ì": "i", "Ì": "I",
+      "ò": "o", "Ò": "O",
+      "ù": "u", "Ù": "U",
+      "—": ", "
+    };
+    const exceptionalWords = new Set(["μ", "µ"]);
+
+    let uploadedText = "";
+    let processedText = "";
+    let originalFileName = "";
+
+    function cleanText(text) {
+      if (exceptionalWords.has(text.trim())) return text;
+
+      let changes = [];
+      for (const [k, v] of Object.entries(charMap)) {
+        if (text.includes(k)) {
+          changes.push(k);
+          text = text.split(k).join(v);
+        }
+      }
+
+      let newText = "";
+      for (const ch of text) {
+        if (/[\x00-\x7F]/.test(ch) || ch === "•" || ch === ",") {
+          newText += ch;
+        } else {
+          changes.push(ch);
+        }
+      }
+
+      if (changes.length > 0) console.log(`Replaced/removed: ${[...new Set(changes)].sort().join(", ")}`);
+      return newText;
+    }
+
+    async function readWordFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function() {
+          mammoth.extractRawText({ arrayBuffer: reader.result })
+            .then(result => resolve(result.value))
+            .catch(err => reject(err));
         };
-        const exceptionalWords = new Set(["μ", "µ"]);
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
 
-        let uploadedText = "";
-        let processedText = "";
-        let originalFileName = "";
+    // Upload button
+    document.getElementById("uploadBtn").addEventListener("click", async () => {
+      const file = document.getElementById("wordFile").files[0];
+      if (!file) return alert("Please select a Word file to upload.");
 
-        function cleanText(text) {
-            if (exceptionalWords.has(text.trim())) return text;
+      try {
+        uploadedText = await readWordFile(file);
+        processedText = ""; 
+        originalFileName = file.name; 
+        document.getElementById("result").textContent = uploadedText;
+      } catch (err) {
+        alert("Error reading file. Make sure it is a valid Word document.");
+        console.error(err);
+      }
+    });
 
-            let changes = [];
-            for (const [k, v] of Object.entries(charMap)) {
-                if (text.includes(k)) {
-                    changes.push(k);
-                    text = text.split(k).join(v);
-                }
-            }
+    // Process uploaded file
+    document.getElementById("processBtn").addEventListener("click", () => {
+      if (!uploadedText) return alert("No file uploaded yet.");
+      processedText = cleanText(uploadedText);
+      document.getElementById("result").textContent = processedText;
+    });
 
-            let newText = "";
-            for (const ch of text) {
-                if (/[\x00-\x7F]/.test(ch) || ch === "•" || ch === ",") {
-                    newText += ch;
-                } else {
-                    changes.push(ch);
-                }
-            }
+    // Download processed docx
+    document.getElementById("downloadBtn").addEventListener("click", async () => {
+      if (!processedText) return alert("Please process the text before downloading.");
 
-            if (changes.length > 0) console.log(`Replaced/removed: ${[...new Set(changes)].sort().join(", ")}`);
-            return newText;
-        }
-
-        async function readWordFile(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = function() {
-                    mammoth.extractRawText({ arrayBuffer: reader.result })
-                        .then(result => resolve(result.value))
-                        .catch(err => reject(err));
-                };
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        // Upload button
-        document.getElementById("uploadBtn").addEventListener("click", async () => {
-            const file = document.getElementById("wordFile").files[0];
-            if (!file) return alert("Please select a Word file to upload.");
-
-            try {
-                uploadedText = await readWordFile(file);
-                processedText = ""; // reset processed text
-                originalFileName = file.name; // store original file name
-                document.getElementById("result").textContent = uploadedText;
-            } catch (err) {
-                alert("Error reading file. Make sure it is a valid Word document.");
-                console.error(err);
-            }
-        });
-
-        // Process uploaded file
-        document.getElementById("processBtn").addEventListener("click", () => {
-            if (!uploadedText) return alert("No file uploaded yet.");
-            processedText = cleanText(uploadedText);
-            document.getElementById("result").textContent = processedText;
-        });
-
-        // Download processed docx
-        document.getElementById("downloadBtn").addEventListener("click", async () => {
-            if (!processedText) return alert("Please process the text before downloading.");
-
-            const doc = new docx.Document({
-                sections: [
-                    {
-                        properties: {},
-                        children: [
-                            new docx.Paragraph({
-                                children: [ new docx.TextRun({ text: processedText, font: "Times New Roman" }) ]
-                            })
-                        ]
-                    }
+      const doc = new docx.Document({
+        sections: [
+          {
+            children: [
+              new docx.Paragraph({
+                children: [
+                  new docx.TextRun({
+                    text: processedText,
+                    font: "Times New Roman"
+                  })
                 ]
-            });
+              })
+            ]
+          }
+        ]
+      });
 
-            try {
-                const blob = await docx.Packer.toBlob(doc);
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = originalFileName;
-                link.click();
-                URL.revokeObjectURL(link.href);
-            } catch (err) {
-                alert("Error generating Word document.");
-                console.error(err);
-            }
-        });
+      try {
+        const blob = await docx.Packer.toBlob(doc);
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
 
-        // Process pasted text
-        document.getElementById("processPasteBtn").addEventListener("click", () => {
-            const text = document.getElementById("pasteBox").value.trim();
-            if (!text) return alert("Please paste some text first.");
-            processedText = cleanText(text);
-            document.getElementById("result").textContent = processedText;
-        });
+        // Save as original filename with "_processed"
+        const baseName = originalFileName ? originalFileName.replace(/\.[^/.]+$/, "") : "processed";
+        link.download = baseName + "_processed.docx";
 
-        // Copy processed text
-        document.getElementById("copyBtn").addEventListener("click", () => {
-            if (!processedText) return alert("No processed text to copy.");
-            navigator.clipboard.writeText(processedText)
-                .then(() => alert("Processed text copied to clipboard!"))
-                .catch(err => console.error("Copy failed:", err));
-        });
-    </script>
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+      } catch (err) {
+        alert("Error generating Word document.");
+        console.error(err);
+      }
+    });
+
+    // Process pasted text
+    document.getElementById("processPasteBtn").addEventListener("click", () => {
+      const text = document.getElementById("pasteBox").value.trim();
+      if (!text) return alert("Please paste some text first.");
+      processedText = cleanText(text);
+      document.getElementById("result").textContent = processedText;
+    });
+
+    // Copy processed text
+    document.getElementById("copyBtn").addEventListener("click", () => {
+      if (!processedText) return alert("No processed text to copy.");
+      navigator.clipboard.writeText(processedText)
+        .then(() => alert("Processed text copied to clipboard!"))
+        .catch(err => console.error("Copy failed:", err));
+    });
+  </script>
 </body>
 </html>
